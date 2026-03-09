@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SH Adesivos - Orcamento</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 15px;
+    }
+
+    /* ===== CONTROLES ===== */
+    .controls {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      width: 100%;
+      max-width: 800px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    .controls h2 {
+      font-size: 17px;
+      font-weight: 800;
+      color: #2e3092;
+      margin-bottom: 16px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .form-group label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #999;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+
+    .form-group input {
+      padding: 10px 12px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all .2s;
+      background: #fafafa;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #2e3092;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(46,48,146,.08);
+    }
+
+    .items-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 16px 0 8px;
+    }
+
+    .items-header h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn:active { transform: scale(.97); }
+
+    .btn-add { background: #2e3092; color: #fff; }
+    .btn-add:hover { background: #24267a; }
+
+    .btn-remove {
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 7px 12px;
+      font-size: 13px;
+      border-radius: 6px;
+      font-weight: 800;
+    }
+
+    .btn-remove:hover { background: #fecaca; }
+
+    .btn-download {
+      background: #2e3092;
+      color: #fff;
+      font-size: 14px;
+      padding: 12px 28px;
+      margin-top: 16px;
+      width: 100%;
+      border-radius: 10px;
+      letter-spacing: .3px;
+    }
+
+    .btn-download:hover { background: #24267a; }
+
+    .item-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .item-row input[type="text"] {
+      flex: 3;
+      padding: 9px 12px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fafafa;
+      transition: all .2s;
+    }
+
+    .item-row input[type="number"] {
+      padding: 9px 10px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fafafa;
+      transition: all .2s;
+    }
+
+    .item-row .input-valor { width: 120px; }
+    .item-row .input-qtd { width: 65px; text-align: center; }
+
+    .item-row input:focus {
+      outline: none;
+      border-color: #2e3092;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(46,48,146,.08);
+    }
+
+    .item-labels {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 4px;
+      padding-right: 44px;
+    }
+
+    .item-labels span {
+      font-size: 9px;
+      font-weight: 700;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+
+    .item-labels .lbl-desc { flex: 3; }
+    .item-labels .lbl-qtd { width: 65px; text-align: center; }
+    .item-labels .lbl-valor { width: 120px; }
+
+    /* ===== ORCAMENTO (PDF) ===== */
+    .orcamento {
+      background: #fff;
+      width: 100%;
+      max-width: 800px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 3px solid #2e3092;
+    }
+
+    .header .logo-img {
+      max-width: 220px;
+      height: auto;
+    }
+
+    .header-info {
+      text-align: right;
+      font-size: 11px;
+      color: #555;
+      line-height: 1.7;
+    }
+
+    .header-info .empresa-nome {
+      font-size: 13px;
+      font-weight: 700;
+      color: #222;
+    }
+
+    .header-info .phone {
+      font-size: 14px;
+      font-weight: 800;
+      color: #2e3092;
+      margin-top: 2px;
+    }
+
+    /* Title */
+    .title-bar {
+      background: #2e3092;
+      color: #fff;
+      text-align: center;
+      padding: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+    }
+
+    /* Info boxes */
+    .info-section {
+      padding: 16px 32px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .info-box {
+      flex: 1;
+      padding: 10px 14px;
+      background: #f7f7fc;
+      border-radius: 6px;
+      border-left: 3px solid #2e3092;
+    }
+
+    .info-box .label {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #999;
+      font-weight: 700;
+      letter-spacing: .8px;
+    }
+
+    .info-box .value {
+      font-size: 15px;
+      font-weight: 800;
+      color: #222;
+      margin-top: 2px;
+    }
+
+    /* Tabela de Produtos */
+    .produtos-table {
+      padding: 0 32px 12px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #2e3092;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 14px 32px 6px;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      border-bottom: 1.5px solid #e8e8e8;
+    }
+
+    .table-header .th-item { width: 28px; }
+    .table-header .th-nome { flex: 3; }
+    .table-header .th-qtd { width: 50px; text-align: center; }
+    .table-header .th-unit { width: 95px; text-align: right; }
+    .table-header .th-total { width: 105px; text-align: right; }
+
+    .produto-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background .1s;
+    }
+
+    .produto-item:last-child { border-bottom: none; }
+
+    .produto-item:nth-child(even) { background: #fafafd; }
+
+    .produto-item .item-num {
+      width: 28px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #bbb;
+    }
+
+    .produto-item .nome {
+      flex: 3;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .produto-item .qtd {
+      width: 50px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .produto-item .unit {
+      width: 95px;
+      text-align: right;
+      font-size: 12px;
+      color: #777;
+    }
+
+    .produto-item .subtotal {
+      width: 105px;
+      text-align: right;
+      font-size: 13px;
+      font-weight: 800;
+      color: #2e3092;
+    }
+
+    /* Total */
+    .total-section {
+      background: #2e3092;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 32px;
+      margin: 8px 32px 0;
+      border-radius: 6px;
+    }
+
+    .total-section .total-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: .85;
+    }
+
+    .total-section .total-value {
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      gap: 16px;
+      padding: 18px 32px;
+      margin-top: 14px;
+      background: #f7f7fc;
+      font-size: 10px;
+      color: #555;
+      line-height: 1.8;
+      border-top: 1.5px solid #e8e8e8;
+    }
+
+    .footer-col { flex: 1; }
+
+    .footer-col strong {
+      color: #2e3092;
+      display: block;
+      margin-bottom: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding: 10px 32px;
+      font-size: 9px;
+      color: #aaa;
+      border-top: 1px solid #eee;
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: #bbb;
+      padding: 16px;
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* ===== IMPRESSAO ===== */
+    @media print {
+      body { background: #fff; padding: 0; }
+      .controls { display: none !important; }
+      .orcamento { box-shadow: none; max-width: 100%; }
+      .header, .title-bar, .total-section, .produto-item, .info-box, .footer,
+      .footer-bottom, .table-header, .section-label {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CONTROLES -->
+  <div class="controls">
+    <h2>Novo Orcamento</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="inputData" />
+      </div>
+      <div class="form-group">
+        <label>Cliente</label>
+        <input type="text" id="inputCliente" placeholder="Nome do cliente" required />
+      </div>
+    </div>
+
+    <div class="items-header">
+      <h3>Itens do orcamento</h3>
+      <button class="btn btn-add" onclick="addItem()">+ Adicionar item</button>
+    </div>
+
+    <div class="item-labels">
+      <span class="lbl-desc">Descricao</span>
+      <span class="lbl-qtd">Qtd</span>
+      <span class="lbl-valor">Valor unit.</span>
+    </div>
+
+    <div id="itemsContainer">
+      <div class="item-row">
+        <input type="text" placeholder="Descricao do produto" oninput="render()" />
+        <input type="number" class="input-qtd" placeholder="Qtd" min="1" value="1" oninput="render()" />
+        <input type="number" class="input-valor" placeholder="Valor (R$)" step="0.01" min="0" oninput="render()" />
+        <button class="btn btn-remove" onclick="removeItem(this)">X</button>
+      </div>
+    </div>
+
+    <button class="btn btn-download" onclick="downloadPDF()">Baixar PDF</button>
+  </div>
+
+  <!-- ORCAMENTO -->
+  <div class="orcamento" id="orcamento">
+
+    <div class="header">
+      <img class="logo-img" src="logo.svg" alt="SH Adesivos" />
+      <div class="header-info">
+        <div class="empresa-nome">SH Adesivos Eireli</div>
+        CNPJ: 41.047.852/0001-11<br>
+        Av. Jose Faria da Rocha, 1007<br>
+        Eldorado - Contagem/MG
+        <div class="phone">31 97172-3207</div>
+      </div>
+    </div>
+
+    <div class="title-bar">Orcamento</div>
+
+    <div class="info-section">
+      <div class="info-box">
+        <div class="label">Data</div>
+        <div class="value" id="displayData">--/--/----</div>
+      </div>
+      <div class="info-box">
+        <div class="label">Cliente</div>
+        <div class="value" id="displayCliente">---</div>
+      </div>
+    </div>
+
+    <div class="section-label">Produtos / Servicos</div>
+
+    <div class="produtos-table">
+      <div class="table-header">
+        <span class="th-item">#</span>
+        <span class="th-nome">Descricao</span>
+        <span class="th-qtd">Qtd</span>
+        <span class="th-unit">Unitario</span>
+        <span class="th-total">Total</span>
+      </div>
+      <div id="displayProdutos">
+        <div class="empty-msg">Adicione itens acima</div>
+      </div>
+    </div>
+
+    <div class="total-section">
+      <div class="total-label">Valor Total</div>
+      <div class="total-value" id="displayTotal">R$ 0,00</div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-col">
+        <strong>Dados da Empresa</strong>
+        CNPJ: 41.047.852/0001-11<br>
+        Razao Social: SH ADESIVO EIRELI<br>
+        Nome Fantasia: SH ADESIVOS<br>
+        Insc. Estadual: 0039864750097<br>
+        Email: adesivosh@gmail.com<br>
+        Tel: 31 971723207 | Contato: Fabricio<br>
+        Av. Jose Faria da Rocha, 1007<br>
+        Eldorado - CEP 32315040 - Contagem/MG
+      </div>
+      <div class="footer-col">
+        <strong>Dados Bancarios / Pagamento</strong>
+        PIX CNPJ: 41047852/0001-11<br>
+        Condicao: 30 dias<br>
+        Banco: 077 | Agencia: 0001<br>
+        Conta Corrente: 119248190<br>
+        Gerente: virtual
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      Orcamento valido por 15 dias a partir da data de emissao.
+    </div>
+  </div>
+
+  <script>
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('inputData').value = hoje;
+
+    document.getElementById('inputData').addEventListener('input', render);
+    document.getElementById('inputCliente').addEventListener('input', render);
+
+    function addItem() {
+      const container = document.getElementById('itemsContainer');
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Descricao do produto" oninput="render()" />
+        <input type="number" class="input-qtd" placeholder="Qtd" min="1" value="1" oninput="render()" />
+        <input type="number" class="input-valor" placeholder="Valor (R$)" step="0.01" min="0" oninput="render()" />
+        <button class="btn btn-remove" onclick="removeItem(this)">X</button>
+      `;
+      container.appendChild(row);
+    }
+
+    function removeItem(btn) {
+      const rows = document.querySelectorAll('#itemsContainer .item-row');
+      if (rows.length > 1) {
+        btn.parentElement.remove();
+        render();
+      }
+    }
+
+    function formatBRL(value) {
+      return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function render() {
+      const dataVal = document.getElementById('inputData').value;
+      if (dataVal) {
+        const [y, m, d] = dataVal.split('-');
+        document.getElementById('displayData').textContent = `${d}/${m}/${y}`;
+      } else {
+        document.getElementById('displayData').textContent = '--/--/----';
+      }
+
+      const cliente = document.getElementById('inputCliente').value.trim();
+      document.getElementById('displayCliente').textContent = cliente || '---';
+
+      const rows = document.querySelectorAll('#itemsContainer .item-row');
+      const container = document.getElementById('displayProdutos');
+      container.innerHTML = '';
+
+      let total = 0;
+      let temItem = false;
+      let idx = 1;
+
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const nome = inputs[0].value.trim();
+        const qtd = parseInt(inputs[1].value) || 1;
+        const valorUnit = parseFloat(inputs[2].value) || 0;
+        const subtotal = qtd * valorUnit;
+
+        if (nome || valorUnit > 0) {
+          temItem = true;
+          total += subtotal;
+
+          const div = document.createElement('div');
+          div.className = 'produto-item';
+          div.innerHTML = `
+            <span class="item-num">${String(idx).padStart(2, '0')}</span>
+            <span class="nome">${nome || 'Sem descricao'}</span>
+            <span class="qtd">${qtd}</span>
+            <span class="unit">${formatBRL(valorUnit)}</span>
+            <span class="subtotal">${formatBRL(subtotal)}</span>
+          `;
+          container.appendChild(div);
+          idx++;
+        }
+      });
+
+      if (!temItem) {
+        container.innerHTML = '<div class="empty-msg">Adicione itens acima</div>';
+      }
+
+      document.getElementById('displayTotal').textContent = formatBRL(total);
+    }
+
+    function downloadPDF() {
+      const clienteInput = document.getElementById('inputCliente');
+      const cliente = clienteInput.value.trim();
+      if (!cliente) {
+        clienteInput.focus();
+        clienteInput.style.borderColor = '#dc2626';
+        clienteInput.style.boxShadow = '0 0 0 3px rgba(220,38,38,.15)';
+        return;
+      }
+      clienteInput.style.borderColor = '';
+      clienteInput.style.boxShadow = '';
+      const element = document.getElementById('orcamento');
+      const dataVal = document.getElementById('inputData').value;
+      let nomeArquivo = 'ORCAMENTO';
+      if (cliente) nomeArquivo += ' ' + cliente.toUpperCase();
+      if (dataVal) {
+        const [y, m, d] = dataVal.split('-');
+        nomeArquivo += ` ${d}-${m}-${y}`;
+      }
+
+      const opt = {
+        margin: [4, 0, 4, 0],
+        filename: nomeArquivo + '.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+
+    render();
+  </script>
+
+</body>
+</html>
