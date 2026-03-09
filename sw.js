@@ -1,4 +1,4 @@
-var CACHE_NAME = 'sh-orcamentos-v2';
+var CACHE_NAME = 'sh-orcamentos-v3';
 var ASSETS = [
   './',
   './index.html',

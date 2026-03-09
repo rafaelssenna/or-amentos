@@ -763,9 +763,11 @@
 
     render();
 
-    // PWA - Service Worker
+    // PWA - Service Worker (force update)
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js');
+      navigator.serviceWorker.register('./sw.js').then(function(reg) {
+        reg.update();
+      });
     }
   </script>
 
