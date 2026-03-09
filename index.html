@@ -471,8 +471,13 @@
 
       .btn-actions { flex-direction: column; }
 
-      /* PDF preview escondido no mobile */
-      .orcamento { display: none; }
+      /* Preview fora da tela no mobile mas renderizado pro PDF */
+      .orcamento {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        width: 800px;
+      }
     }
 
     /* ===== IMPRESSAO ===== */
@@ -727,15 +732,9 @@
       const cliente = validarCliente();
       if (!cliente) return;
 
-      // No mobile o preview fica escondido, mostra temporariamente pra gerar
       const orc = document.getElementById('orcamento');
-      const wasHidden = getComputedStyle(orc).display === 'none';
-      if (wasHidden) orc.style.display = 'block';
-
       const nomeArquivo = getNomeArquivo(cliente);
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save().then(() => {
-        if (wasHidden) orc.style.display = '';
-      });
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save();
     }
 
     function sharePDF() {
@@ -743,25 +742,18 @@
       if (!cliente) return;
 
       const orc = document.getElementById('orcamento');
-      const wasHidden = getComputedStyle(orc).display === 'none';
-      if (wasHidden) orc.style.display = 'block';
-
       const nomeArquivo = getNomeArquivo(cliente);
 
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).outputPdf('blob').then(blob => {
-        if (wasHidden) orc.style.display = '';
-
-        const file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).outputPdf('arraybuffer').then(function(buffer) {
+        var blob = new Blob([buffer], { type: 'application/pdf' });
+        var file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({
-            files: [file],
-            title: nomeArquivo,
-          });
+          navigator.share({ files: [file], title: nomeArquivo });
         } else {
-          // Fallback: baixa o PDF se o navegador nao suporta share
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
+          // Fallback: baixa o PDF
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
           a.href = url;
           a.download = nomeArquivo + '.pdf';
           a.click();
