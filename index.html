@@ -10,7 +10,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SH Orcamentos">
   <link rel="apple-touch-icon" href="logo.png">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
@@ -613,6 +614,23 @@
     const hoje = new Date().toISOString().split('T')[0];
     document.getElementById('inputData').value = hoje;
 
+    // Preload logo as base64 for PDF generation
+    var LOGO_B64 = null;
+    (function preloadLogo() {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        try {
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          LOGO_B64 = c.toDataURL('image/png');
+        } catch(e) { console.warn('Logo b64 fail', e); }
+      };
+      img.src = 'logo.png';
+    })();
+
     document.getElementById('inputData').addEventListener('input', render);
     document.getElementById('inputCliente').addEventListener('input', render);
 
@@ -718,60 +736,206 @@
       return nome;
     }
 
-    function gerarPdfElement() {
-      // Clona o orcamento num container temporario visivel no topo
-      var orc = document.getElementById('orcamento');
-      var clone = orc.cloneNode(true);
-      clone.id = '';
-      clone.style.cssText = 'position:fixed;top:0;left:0;width:800px;z-index:99999;background:#fff;overflow:visible;';
-      document.body.appendChild(clone);
-      return clone;
-    }
+    function generatePdfDoc() {
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
 
-    function getPdfOpts(nomeArquivo) {
-      return {
-        margin: [4, 0, 4, 0],
-        filename: nomeArquivo + '.pdf',
-        image: { type: 'jpeg', quality: 0.5 },
-        html2canvas: { scale: 1.5, useCORS: true, allowTaint: true, scrollX: 0, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true }
-      };
+      var pageW = 210;
+      var mL = 15, mR = 15;
+      var cW = pageW - mL - mR;
+      var y = 12;
+
+      // Colors
+      var blue = [46, 48, 146];
+      var white = [255, 255, 255];
+      var g55 = [85, 85, 85];
+      var g99 = [153, 153, 153];
+      var gBB = [187, 187, 187];
+      var tDark = [34, 34, 34];
+      var bgL = [247, 247, 252];
+
+      // === HEADER ===
+      if (LOGO_B64) {
+        try { doc.addImage(LOGO_B64, 'PNG', mL, y, 50, 18); } catch(e) {}
+      }
+
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(tDark[0], tDark[1], tDark[2]);
+      doc.text('SH Adesivos Eireli', pageW - mR, y + 4, { align: 'right' });
+
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(g55[0], g55[1], g55[2]);
+      doc.text('CNPJ: 41.047.852/0001-11', pageW - mR, y + 10, { align: 'right' });
+      doc.text('Av. Jose Faria da Rocha, 1007', pageW - mR, y + 15, { align: 'right' });
+      doc.text('Eldorado - Contagem/MG', pageW - mR, y + 20, { align: 'right' });
+
+      doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(blue[0], blue[1], blue[2]);
+      doc.text('31 97172-3207', pageW - mR, y + 27, { align: 'right' });
+
+      y += 32;
+      doc.setDrawColor(blue[0], blue[1], blue[2]); doc.setLineWidth(0.8);
+      doc.line(mL, y, pageW - mR, y);
+      y += 2;
+
+      // === TITLE BAR ===
+      doc.setFillColor(blue[0], blue[1], blue[2]);
+      doc.rect(mL, y, cW, 10, 'F');
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+      doc.text('O R C A M E N T O', pageW / 2, y + 7, { align: 'center' });
+      y += 14;
+
+      // === DATE + CLIENT BOXES ===
+      var boxW = (cW - 4) / 2, boxH = 16;
+      var dataDisplay = document.getElementById('displayData').textContent;
+      var clienteDisplay = document.getElementById('displayCliente').textContent;
+
+      // Date box
+      doc.setFillColor(bgL[0], bgL[1], bgL[2]); doc.rect(mL, y, boxW, boxH, 'F');
+      doc.setFillColor(blue[0], blue[1], blue[2]); doc.rect(mL, y, 1, boxH, 'F');
+      doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(g99[0], g99[1], g99[2]);
+      doc.text('DATA', mL + 5, y + 5);
+      doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(tDark[0], tDark[1], tDark[2]);
+      doc.text(dataDisplay, mL + 5, y + 12);
+
+      // Client box
+      var b2X = mL + boxW + 4;
+      doc.setFillColor(bgL[0], bgL[1], bgL[2]); doc.rect(b2X, y, boxW, boxH, 'F');
+      doc.setFillColor(blue[0], blue[1], blue[2]); doc.rect(b2X, y, 1, boxH, 'F');
+      doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(g99[0], g99[1], g99[2]);
+      doc.text('CLIENTE', b2X + 5, y + 5);
+      doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(tDark[0], tDark[1], tDark[2]);
+      doc.text(clienteDisplay, b2X + 5, y + 12);
+
+      y += boxH + 6;
+
+      // === TABLE LABEL ===
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(blue[0], blue[1], blue[2]);
+      doc.text('PRODUTOS / SERVICOS', mL, y + 3);
+      y += 7;
+
+      // === TABLE DATA ===
+      var rows = document.querySelectorAll('#itemsContainer .item-row');
+      var tableBody = [];
+      var totalGeral = 0;
+      var idx = 1;
+
+      rows.forEach(function(row) {
+        var inputs = row.querySelectorAll('input');
+        var nome = inputs[0].value.trim();
+        var qtd = parseInt(inputs[1].value) || 1;
+        var valorUnit = parseFloat(inputs[2].value) || 0;
+        var subtotal = qtd * valorUnit;
+
+        if (nome || valorUnit > 0) {
+          totalGeral += subtotal;
+          tableBody.push([
+            String(idx).padStart(2, '0'),
+            nome || 'Sem descricao',
+            String(qtd),
+            formatBRL(valorUnit),
+            formatBRL(subtotal)
+          ]);
+          idx++;
+        }
+      });
+
+      doc.autoTable({
+        startY: y,
+        margin: { left: mL, right: mR },
+        head: [['#', 'Descricao', 'Qtd', 'Unitario', 'Total']],
+        body: tableBody.length > 0 ? tableBody : [['', 'Nenhum item adicionado', '', '', '']],
+        theme: 'plain',
+        styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, textColor: [51, 51, 51], lineColor: [230, 230, 230], lineWidth: 0.3 },
+        headStyles: { fillColor: false, textColor: [g99[0], g99[1], g99[2]], fontSize: 7, fontStyle: 'bold', cellPadding: { top: 2, bottom: 4, left: 3, right: 3 } },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'left', textColor: [gBB[0], gBB[1], gBB[2]], fontStyle: 'bold' },
+          1: { cellWidth: 'auto', fontStyle: 'bold' },
+          2: { cellWidth: 16, halign: 'center' },
+          3: { cellWidth: 30, halign: 'right', textColor: [119, 119, 119], fontSize: 8 },
+          4: { cellWidth: 32, halign: 'right', textColor: [blue[0], blue[1], blue[2]], fontStyle: 'bold' }
+        },
+        alternateRowStyles: { fillColor: [250, 250, 253] }
+      });
+
+      y = doc.lastAutoTable.finalY + 6;
+
+      // === TOTAL BAR ===
+      var totalBarH = 14;
+      doc.setFillColor(blue[0], blue[1], blue[2]);
+      doc.roundedRect(mL, y, cW, totalBarH, 2, 2, 'F');
+
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(200, 200, 230);
+      doc.text('VALOR TOTAL', mL + 8, y + 9);
+
+      doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+      doc.text(formatBRL(totalGeral), pageW - mR - 8, y + 10, { align: 'right' });
+
+      y += totalBarH + 8;
+
+      // === FOOTER ===
+      // Check if footer fits, else new page
+      var footerH = 42;
+      if (y + footerH + 15 > 297) { doc.addPage(); y = 12; }
+
+      doc.setDrawColor(232, 232, 232); doc.setLineWidth(0.3);
+      doc.line(mL, y, pageW - mR, y);
+      doc.setFillColor(bgL[0], bgL[1], bgL[2]);
+      doc.rect(mL, y + 0.5, cW, footerH, 'F');
+
+      var fY = y + 5;
+      var colW = cW / 2;
+
+      // Left: Company data
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(blue[0], blue[1], blue[2]);
+      doc.text('DADOS DA EMPRESA', mL + 4, fY);
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(g55[0], g55[1], g55[2]);
+      var lL = ['CNPJ: 41.047.852/0001-11','Razao Social: SH ADESIVO EIRELI','Nome Fantasia: SH ADESIVOS','Insc. Estadual: 0039864750097','Email: adesivosh@gmail.com','Tel: 31 971723207 | Contato: Fabricio','Av. Jose Faria da Rocha, 1007','Eldorado - CEP 32315040 - Contagem/MG'];
+      lL.forEach(function(line, i) { doc.text(line, mL + 4, fY + 5 + (i * 4)); });
+
+      // Right: Banking data
+      var rX = mL + colW + 4;
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(blue[0], blue[1], blue[2]);
+      doc.text('DADOS BANCARIOS / PAGAMENTO', rX, fY);
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(g55[0], g55[1], g55[2]);
+      var rL = ['PIX CNPJ: 41047852/0001-11','Condicao: 30 dias','Banco: 077 | Agencia: 0001','Conta Corrente: 119248190','Gerente: virtual'];
+      rL.forEach(function(line, i) { doc.text(line, rX, fY + 5 + (i * 4)); });
+
+      y += footerH + 2;
+
+      // === VALIDITY NOTICE ===
+      doc.setDrawColor(238, 238, 238); doc.setLineWidth(0.2);
+      doc.line(mL, y, pageW - mR, y);
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(170, 170, 170);
+      doc.text('Orcamento valido por 15 dias a partir da data de emissao.', pageW / 2, y + 5, { align: 'center' });
+
+      return doc;
     }
 
     function downloadPDF() {
-      const cliente = validarCliente();
+      var cliente = validarCliente();
       if (!cliente) return;
-
-      var clone = gerarPdfElement();
       var nomeArquivo = getNomeArquivo(cliente);
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(clone).save().then(function() {
-        clone.remove();
-      });
+      var doc = generatePdfDoc();
+      doc.save(nomeArquivo + '.pdf');
     }
 
     function sharePDF() {
-      const cliente = validarCliente();
+      var cliente = validarCliente();
       if (!cliente) return;
-
-      var clone = gerarPdfElement();
       var nomeArquivo = getNomeArquivo(cliente);
+      var doc = generatePdfDoc();
+      var arrayBuffer = doc.output('arraybuffer');
+      var blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      var file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
 
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(clone).outputPdf('arraybuffer').then(function(buffer) {
-        clone.remove();
-        var blob = new Blob([buffer], { type: 'application/pdf' });
-        var file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], title: nomeArquivo });
-        } else {
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = nomeArquivo + '.pdf';
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-      });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: nomeArquivo });
+      } else {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = nomeArquivo + '.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     }
 
     render();
