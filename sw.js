@@ -1,8 +1,8 @@
-var CACHE_NAME = 'sh-orcamentos-v1';
+var CACHE_NAME = 'sh-orcamentos-v2';
 var ASSETS = [
   './',
   './index.html',
-  './logo.svg',
+  './logo.png',
   './manifest.json',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js'
@@ -29,22 +29,21 @@ self.addEventListener('activate', function(e) {
   self.clients.claim();
 });
 
+// Network first - sempre tenta buscar do servidor antes de usar cache
 self.addEventListener('fetch', function(e) {
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      return cached || fetch(e.request).then(function(response) {
-        if (response.ok && e.request.method === 'GET') {
-          var clone = response.clone();
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(e.request, clone);
-          });
-        }
-        return response;
-      });
-    }).catch(function() {
-      if (e.request.mode === 'navigate') {
-        return caches.match('./index.html');
+    fetch(e.request).then(function(response) {
+      if (response.ok && e.request.method === 'GET') {
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(e.request, clone);
+        });
       }
+      return response;
+    }).catch(function() {
+      return caches.match(e.request).then(function(cached) {
+        return cached || (e.request.mode === 'navigate' ? caches.match('./index.html') : undefined);
+      });
     })
   );
 });
