@@ -477,13 +477,7 @@
 
       .btn-actions { flex-direction: column; }
 
-      /* Preview fora da tela no mobile mas renderizado pro PDF */
-      .orcamento {
-        position: absolute;
-        left: -9999px;
-        top: 0;
-        width: 800px;
-      }
+      .orcamento { overflow-x: auto; }
     }
 
     /* ===== IMPRESSAO ===== */
@@ -734,38 +728,13 @@
       };
     }
 
-    function prepararParaPdf() {
-      var orc = document.getElementById('orcamento');
-      var isMobile = window.matchMedia('(max-width: 600px)').matches;
-      if (isMobile) {
-        orc.style.position = 'fixed';
-        orc.style.left = '0';
-        orc.style.top = '0';
-        orc.style.zIndex = '-1';
-        orc.style.opacity = '0';
-        orc.style.width = '800px';
-      }
-      return function restaurar() {
-        if (isMobile) {
-          orc.style.position = '';
-          orc.style.left = '';
-          orc.style.top = '';
-          orc.style.zIndex = '';
-          orc.style.opacity = '';
-          orc.style.width = '';
-        }
-      };
-    }
-
     function downloadPDF() {
       const cliente = validarCliente();
       if (!cliente) return;
 
       const orc = document.getElementById('orcamento');
       const nomeArquivo = getNomeArquivo(cliente);
-      const restaurar = prepararParaPdf();
-
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save().then(restaurar);
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save();
     }
 
     function sharePDF() {
@@ -774,10 +743,8 @@
 
       const orc = document.getElementById('orcamento');
       const nomeArquivo = getNomeArquivo(cliente);
-      const restaurar = prepararParaPdf();
 
       html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).outputPdf('arraybuffer').then(function(buffer) {
-        restaurar();
         var blob = new Blob([buffer], { type: 'application/pdf' });
         var file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
 
