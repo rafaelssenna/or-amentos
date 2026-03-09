@@ -718,12 +718,22 @@
       return nome;
     }
 
+    function gerarPdfElement() {
+      // Clona o orcamento num container temporario visivel no topo
+      var orc = document.getElementById('orcamento');
+      var clone = orc.cloneNode(true);
+      clone.id = '';
+      clone.style.cssText = 'position:fixed;top:0;left:0;width:800px;z-index:99999;background:#fff;overflow:visible;';
+      document.body.appendChild(clone);
+      return clone;
+    }
+
     function getPdfOpts(nomeArquivo) {
       return {
         margin: [4, 0, 4, 0],
         filename: nomeArquivo + '.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 1, useCORS: true, scrollX: 0, scrollY: -window.scrollY, windowWidth: 800, width: 800 },
+        html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, width: 800 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
     }
@@ -732,19 +742,22 @@
       const cliente = validarCliente();
       if (!cliente) return;
 
-      const orc = document.getElementById('orcamento');
-      const nomeArquivo = getNomeArquivo(cliente);
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save();
+      var clone = gerarPdfElement();
+      var nomeArquivo = getNomeArquivo(cliente);
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(clone).save().then(function() {
+        clone.remove();
+      });
     }
 
     function sharePDF() {
       const cliente = validarCliente();
       if (!cliente) return;
 
-      const orc = document.getElementById('orcamento');
-      const nomeArquivo = getNomeArquivo(cliente);
+      var clone = gerarPdfElement();
+      var nomeArquivo = getNomeArquivo(cliente);
 
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).outputPdf('arraybuffer').then(function(buffer) {
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(clone).outputPdf('arraybuffer').then(function(buffer) {
+        clone.remove();
         var blob = new Blob([buffer], { type: 'application/pdf' });
         var file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
 
