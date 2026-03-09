@@ -734,13 +734,38 @@
       };
     }
 
+    function prepararParaPdf() {
+      var orc = document.getElementById('orcamento');
+      var isMobile = window.matchMedia('(max-width: 600px)').matches;
+      if (isMobile) {
+        orc.style.position = 'fixed';
+        orc.style.left = '0';
+        orc.style.top = '0';
+        orc.style.zIndex = '-1';
+        orc.style.opacity = '0';
+        orc.style.width = '800px';
+      }
+      return function restaurar() {
+        if (isMobile) {
+          orc.style.position = '';
+          orc.style.left = '';
+          orc.style.top = '';
+          orc.style.zIndex = '';
+          orc.style.opacity = '';
+          orc.style.width = '';
+        }
+      };
+    }
+
     function downloadPDF() {
       const cliente = validarCliente();
       if (!cliente) return;
 
       const orc = document.getElementById('orcamento');
       const nomeArquivo = getNomeArquivo(cliente);
-      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save();
+      const restaurar = prepararParaPdf();
+
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save().then(restaurar);
     }
 
     function sharePDF() {
@@ -749,15 +774,16 @@
 
       const orc = document.getElementById('orcamento');
       const nomeArquivo = getNomeArquivo(cliente);
+      const restaurar = prepararParaPdf();
 
       html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).outputPdf('arraybuffer').then(function(buffer) {
+        restaurar();
         var blob = new Blob([buffer], { type: 'application/pdf' });
         var file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           navigator.share({ files: [file], title: nomeArquivo });
         } else {
-          // Fallback: baixa o PDF
           var url = URL.createObjectURL(blob);
           var a = document.createElement('a');
           a.href = url;
