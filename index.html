@@ -539,7 +539,7 @@
   <div class="orcamento" id="orcamento">
 
     <div class="header">
-      <img class="logo-img" src="logo.svg" alt="SH Adesivos" />
+      <img class="logo-img" src="logo.png" alt="SH Adesivos" />
       <div class="header-info">
         <div class="empresa-nome">SH Adesivos Eireli</div>
         CNPJ: 41.047.852/0001-11<br>
@@ -723,7 +723,7 @@
         margin: [4, 0, 4, 0],
         filename: nomeArquivo + '.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
     }
