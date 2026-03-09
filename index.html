@@ -42,6 +42,7 @@
       display: flex;
       gap: 12px;
       margin-bottom: 12px;
+      flex-wrap: wrap;
     }
 
     .form-group {
@@ -116,18 +117,35 @@
 
     .btn-remove:hover { background: #fecaca; }
 
+    .btn-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
     .btn-download {
       background: #2e3092;
       color: #fff;
       font-size: 14px;
       padding: 12px 28px;
-      margin-top: 16px;
-      width: 100%;
+      flex: 1;
       border-radius: 10px;
       letter-spacing: .3px;
     }
 
     .btn-download:hover { background: #24267a; }
+
+    .btn-share {
+      background: #25d366;
+      color: #fff;
+      font-size: 14px;
+      padding: 12px 28px;
+      flex: 1;
+      border-radius: 10px;
+      letter-spacing: .3px;
+    }
+
+    .btn-share:hover { background: #1da851; }
 
     .item-row {
       display: flex;
@@ -418,6 +436,45 @@
       font-style: italic;
     }
 
+    /* ===== MOBILE ===== */
+    @media (max-width: 600px) {
+      body { padding: 12px 8px; }
+
+      .controls { padding: 16px; border-radius: 10px; }
+      .controls h2 { font-size: 15px; margin-bottom: 12px; }
+
+      .form-row { flex-direction: column; gap: 8px; }
+      .form-group input { font-size: 16px; padding: 10px; }
+
+      .items-header { margin: 12px 0 6px; }
+      .items-header h3 { font-size: 12px; }
+
+      .item-labels { display: none; }
+
+      .item-row {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 8px;
+        margin-bottom: 8px;
+      }
+
+      .item-row input[type="text"] {
+        flex: 1 1 100%;
+        font-size: 14px;
+      }
+
+      .item-row .input-qtd { flex: 1; width: auto; min-width: 60px; }
+      .item-row .input-valor { flex: 2; width: auto; min-width: 100px; }
+      .item-row .btn-remove { flex: 0 0 auto; }
+
+      .btn-actions { flex-direction: column; }
+
+      /* PDF preview escondido no mobile */
+      .orcamento { display: none; }
+    }
+
     /* ===== IMPRESSAO ===== */
     @media print {
       body { background: #fff; padding: 0; }
@@ -467,7 +524,10 @@
       </div>
     </div>
 
-    <button class="btn btn-download" onclick="downloadPDF()">Baixar PDF</button>
+    <div class="btn-actions">
+      <button class="btn btn-download" onclick="downloadPDF()">Baixar PDF</button>
+      <button class="btn btn-share" onclick="sharePDF()">Compartilhar</button>
+    </div>
   </div>
 
   <!-- ORCAMENTO -->
@@ -628,35 +688,86 @@
       document.getElementById('displayTotal').textContent = formatBRL(total);
     }
 
-    function downloadPDF() {
+    function validarCliente() {
       const clienteInput = document.getElementById('inputCliente');
       const cliente = clienteInput.value.trim();
       if (!cliente) {
         clienteInput.focus();
         clienteInput.style.borderColor = '#dc2626';
         clienteInput.style.boxShadow = '0 0 0 3px rgba(220,38,38,.15)';
-        return;
+        return null;
       }
       clienteInput.style.borderColor = '';
       clienteInput.style.boxShadow = '';
-      const element = document.getElementById('orcamento');
+      return cliente;
+    }
+
+    function getNomeArquivo(cliente) {
       const dataVal = document.getElementById('inputData').value;
-      let nomeArquivo = 'ORCAMENTO';
-      if (cliente) nomeArquivo += ' ' + cliente.toUpperCase();
+      let nome = 'ORCAMENTO';
+      if (cliente) nome += ' ' + cliente.toUpperCase();
       if (dataVal) {
         const [y, m, d] = dataVal.split('-');
-        nomeArquivo += ` ${d}-${m}-${y}`;
+        nome += ` ${d}-${m}-${y}`;
       }
+      return nome;
+    }
 
-      const opt = {
+    function getPdfOpts(nomeArquivo) {
+      return {
         margin: [4, 0, 4, 0],
         filename: nomeArquivo + '.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
+    }
 
-      html2pdf().set(opt).from(element).save();
+    function downloadPDF() {
+      const cliente = validarCliente();
+      if (!cliente) return;
+
+      // No mobile o preview fica escondido, mostra temporariamente pra gerar
+      const orc = document.getElementById('orcamento');
+      const wasHidden = getComputedStyle(orc).display === 'none';
+      if (wasHidden) orc.style.display = 'block';
+
+      const nomeArquivo = getNomeArquivo(cliente);
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).save().then(() => {
+        if (wasHidden) orc.style.display = '';
+      });
+    }
+
+    function sharePDF() {
+      const cliente = validarCliente();
+      if (!cliente) return;
+
+      const orc = document.getElementById('orcamento');
+      const wasHidden = getComputedStyle(orc).display === 'none';
+      if (wasHidden) orc.style.display = 'block';
+
+      const nomeArquivo = getNomeArquivo(cliente);
+
+      html2pdf().set(getPdfOpts(nomeArquivo)).from(orc).outputPdf('blob').then(blob => {
+        if (wasHidden) orc.style.display = '';
+
+        const file = new File([blob], nomeArquivo + '.pdf', { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            files: [file],
+            title: nomeArquivo,
+          });
+        } else {
+          // Fallback: baixa o PDF se o navegador nao suporta share
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = nomeArquivo + '.pdf';
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      });
     }
 
     render();
