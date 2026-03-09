@@ -723,7 +723,7 @@
         margin: [4, 0, 4, 0],
         filename: nomeArquivo + '.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
+        html2canvas: { scale: 1, useCORS: true, scrollX: 0, scrollY: -window.scrollY, windowWidth: 800, width: 800 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
     }
