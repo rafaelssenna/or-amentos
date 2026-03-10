@@ -7,6 +7,18 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>SH Adesivos - Orcamento</title>
+  <script>
+    // Force reload when version changes - prevents stale cache
+    (function(){
+      var V = '20260310b';
+      if (localStorage.getItem('sh_v') !== V) {
+        localStorage.setItem('sh_v', V);
+        if ('caches' in window) caches.keys().then(function(k){ k.forEach(function(n){ caches.delete(n); }); });
+        if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(r){ r.forEach(function(sw){ sw.unregister(); }); });
+        location.reload(true);
+      }
+    })();
+  </script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2e3092">
   <meta name="apple-mobile-web-app-capable" content="yes">
